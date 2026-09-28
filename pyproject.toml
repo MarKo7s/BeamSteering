@@ -3,11 +3,14 @@ name = "BeamSteering"
 version = "1.0.0"
 description = "ModeLab tilt scan of coupled power around the current Zernike state"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
   "numpy>=2.0,<2.6",
   "matplotlib>=3.8",
-  "zernikes @ git+https://github.com/MarKo7s/zernikes.git@v1.1.0",
+  "slm[gui] @ git+https://github.com/MarKo7s/slm.git@v0.3.0",
+  "zernikes[gui] @ git+https://github.com/MarKo7s/zernikes.git@v1.1.0",
+  "powermeters[gui] @ git+https://github.com/MarKo7s/powermeters.git@v0.2.0",
+  "cameras[gui] @ git+https://github.com/MarKo7s/cameras.git@v0.2.1",
 ]
 
 [project.optional-dependencies]

@@ -44,7 +44,7 @@ class SteeringWidget(QWidget):
 
     def _build_ui(self):
         self.setWindowTitle("SMF steering")
-        self.resize(1100, 700)
+        self.resize(780, 1100)
 
         self._pol_h = QCheckBox("H")
         self._pol_v = QCheckBox("V")
@@ -104,7 +104,7 @@ class SteeringWidget(QWidget):
 
         self._view_h = SteeringMapView("H")
         self._view_v = SteeringMapView("V")
-        maps = QHBoxLayout()
+        maps = QVBoxLayout()
         maps.addWidget(self._view_h, stretch=1)
         maps.addWidget(self._view_v, stretch=1)
 

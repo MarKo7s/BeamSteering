@@ -49,6 +49,8 @@ folder = steering.save()
 pip install "BeamSteering[gui] @ git+https://github.com/MarKo7s/BeamSteering.git@v1.0.0"
 ```
 
+That install also pulls the pinned engines: `slm` v0.3.0, `zernikes` v1.1.0, `powermeters` v0.2.0, and `cameras` v0.2.1.
+
 ### Local development (editable install)
 
 ```bash

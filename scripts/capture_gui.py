@@ -106,7 +106,7 @@ def main() -> None:
 
     app = QApplication.instance() or QApplication(sys.argv)
     window, teardown = build_window()
-    window.resize(1100, 640)
+    window.resize(780, 1100)
     window.show()
     window.raise_()
     window.activateWindow()
