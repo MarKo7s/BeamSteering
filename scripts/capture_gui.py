@@ -46,37 +46,10 @@ class _FakeEngine:
         raise RuntimeError("No steering scan to save.")
 
 
-class _QuietWidget:
-    def disable_user_interface(self):
-        return None
-
-    def setEnabled(self, _state):
-        return None
-
-    def reset_extrema(self):
-        return None
-
-    def remote(self):
-        return None
-
-    def enable_user_interface(self, *_args, **_kwargs):
-        return None
-
-    def refresh_all_from_zernikes(self):
-        return None
-
-    def start(self, *_args, **_kwargs):
-        return None
-
-    def feed(self, _power):
-        return None
-
-
 def build_window():
     from BeamSteering.ui import SteeringWidget
 
-    dummy = _QuietWidget()
-    window = SteeringWidget(_FakeEngine(), dummy, dummy, dummy)
+    window = SteeringWidget(_FakeEngine())
     window.setWindowTitle("SMF steering")
 
     def teardown() -> None:

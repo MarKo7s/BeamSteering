@@ -21,8 +21,9 @@ def _now():
 class ZernikeSteering:
     """Scan tilt around the current Zernike coefficients and record power.
 
-    Widgets stay outside this class. Pass ``on_sample`` and ``on_finished`` if a
-    GUI needs each measurement and the moment the thread ends.
+    ``slm_widget``, ``zernike_widget``, and ``powermeter_widget`` are optional.
+    When all three are passed, ``scan`` locks them and the thread unlocks them
+    when it finishes. With none of them, the hardware loop and ``stop`` still run.
     """
 
     def __init__(
@@ -30,6 +31,9 @@ class ZernikeSteering:
         slm,
         zernike,
         powermeter,
+        slm_widget=None,
+        zernike_widget=None,
+        powermeter_widget=None,
         f_mm=10,
         wav_nm=843.5,
         aperture_mm=7.5,
@@ -39,6 +43,9 @@ class ZernikeSteering:
         self.slm = slm
         self.zernike = zernike
         self.powermeter = powermeter
+        self.slm_widget = slm_widget
+        self.zernike_widget = zernike_widget
+        self.powermeter_widget = powermeter_widget
         self.slm_delay = 0.2
 
         self.f_mm = float(f_mm)
@@ -52,13 +59,14 @@ class ZernikeSteering:
         self.progress = {"iteration": 0, "total": 0, "active_pol": None}
         self._saving_path = None
         self._stop = False
+        self._starting = False
         self._thread = None
         self._lock = Lock()
 
     @property
     def running(self):
         thread = self._thread
-        return thread is not None and thread.is_alive()
+        return self._starting or (thread is not None and thread.is_alive())
 
     def set_scan_parameters(
         self,
@@ -92,25 +100,30 @@ class ZernikeSteering:
         """Start one scan on a daemon thread. Return False if one is already running."""
         if pol not in _POLS:
             raise ValueError(f"Invalid polarization: {pol}")
-        if self.running:
-            return False
-
-        grid = self._snapshot_grid()
-        self._stop = False
-        n_points = int(grid["nx"].size)
         with self._lock:
-            self.progress = {
-                "iteration": 0,
-                "total": n_points * len(pol),
-                "active_pol": None,
-            }
-        self._thread = Thread(
-            target=self._scan_thread,
-            args=(pol, bool(pattern_enabled), grid, on_sample, on_finished),
-            daemon=True,
-        )
-        self._thread.start()
-        return True
+            if self.running:
+                return False
+            self._starting = True
+        try:
+            grid = self._snapshot_grid()
+            self._stop = False
+            n_points = int(grid["nx"].size)
+            with self._lock:
+                self.progress = {
+                    "iteration": 0,
+                    "total": n_points * len(pol),
+                    "active_pol": None,
+                }
+            self.pre_scan_routine()
+            self._thread = Thread(
+                target=self._scan_thread,
+                args=(pol, bool(pattern_enabled), grid, on_sample, on_finished),
+                daemon=True,
+            )
+            self._thread.start()
+            return True
+        finally:
+            self._starting = False
 
     def stop(self):
         """Ask the running scan to finish the current point and then return."""
@@ -172,6 +185,35 @@ class ZernikeSteering:
             return self._saving_path
         raise RuntimeError(_SAVE_PATH_ERROR)
 
+    def pre_scan_routine(self):
+        """Lock the instrument panels. No-op when they were not passed in."""
+        if not self._panels_connected():
+            return
+        self.slm_widget.disable_user_interface()
+        self.zernike_widget.setEnabled(False)
+        self.powermeter_widget.reset_extrema()
+        self.powermeter_widget.remote()
+
+    def post_scan_routine(self):
+        """Unlock the instrument panels from the worker thread.
+
+        The SLM is enabled before the Zernike refresh so the restored phase
+        is pushed onto the mask.
+        """
+        if not self._panels_connected():
+            return
+        self.slm_widget.enable_user_interface(run_async=True)
+        self.zernike_widget.refresh_all_from_zernikes_async()
+        self.zernike_widget.enable_user_interface(True, run_async=True)
+        self.powermeter_widget.start(run_async=True)
+
+    def _panels_connected(self):
+        return (
+            self.slm_widget is not None
+            and self.zernike_widget is not None
+            and self.powermeter_widget is not None
+        )
+
     def _rebuild_grid(self):
         self.x_um, self.y_um, self.nx, self.ny = make_scan_grid(
             self.scan_radius_um,
@@ -203,6 +245,7 @@ class ZernikeSteering:
         finally:
             with self._lock:
                 self.progress["active_pol"] = None
+            self.post_scan_routine()
             if on_finished is not None:
                 on_finished()
 
@@ -262,7 +305,10 @@ class ZernikeSteering:
             side.zernike = self.zernike.znk_phase_v
         self.slm.setmask(pol=pol)
         time.sleep(self.slm_delay)
-        return float(self.powermeter.meas_power())
+        measured = float(self.powermeter.meas_power())
+        if self.powermeter_widget is not None:
+            self.powermeter_widget.feed(measured)
+        return measured
 
 
 def _folder_name(records, when):
@@ -334,8 +380,8 @@ def _write_png(path, pol, record):
         aspect="equal",
         cmap="jet",
     )
-    axes.set_xlabel("x (µm)")
-    axes.set_ylabel("y (µm)")
+    axes.set_xlabel("x (um)")
+    axes.set_ylabel("y (um)")
     axes.set_title(pol)
     figure.colorbar(image, ax=axes, label="power (nW)")
     figure.tight_layout()

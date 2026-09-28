@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+- The scan engine takes the optional SLM, Zernike, and power-meter panels and locks them itself. SteeringWidget takes only the engine.
+- Map axes and the radius and step boxes say um, without a second SI prefix.
+
 ## [1.0.0] - 2026-09-28
 
 - Tilt scan of coupled power on H, V, or both, with the maps stacked under the scan controls.

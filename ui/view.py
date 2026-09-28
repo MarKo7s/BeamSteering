@@ -25,8 +25,10 @@ class SteeringMapView(QWidget):
         pg.setConfigOptions(useOpenGL=False, antialias=False)
         self._graphics = pg.GraphicsLayoutWidget()
         self._plot = self._graphics.addPlot(row=0, col=0, title=title)
-        self._plot.setLabel("bottom", "x", units="µm")
-        self._plot.setLabel("left", "y", units="µm")
+        self._plot.setLabel("bottom", "x", units="um")
+        self._plot.setLabel("left", "y", units="um")
+        self._plot.getAxis("bottom").enableAutoSIPrefix(False)
+        self._plot.getAxis("left").enableAutoSIPrefix(False)
         self._plot.setAspectLocked(True)
         self._plot.showGrid(x=False, y=False)
 

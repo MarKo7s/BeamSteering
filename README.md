@@ -24,8 +24,16 @@ from BeamSteering.ui import SteeringWidget  # requires the gui extra
 ## Quick start
 
 ```python
-steering = ZernikeSteering(slm, zernike, powermeter)
+steering = ZernikeSteering(slm, zernike, powermeter, slm_gui, zernike_gui, powermeter_gui)
 steering.set_saving_path(r"C:\path\to\parent")
+steering_gui = SteeringWidget(steering)
+steering_gui.show()
+```
+
+Without the three panels, the same scan still runs:
+
+```python
+steering = ZernikeSteering(slm, zernike, powermeter)
 steering.scan("H", pattern_enabled=True)
 # steering.stop()
 folder = steering.save()
@@ -35,7 +43,7 @@ folder = steering.save()
 
 ## GUI
 
-`SteeringWidget` takes the engine and the SLM, Zernike, and power-meter widgets. It locks those panels for the scan and polls the maps.
+`SteeringWidget` takes only the engine. The engine locks the SLM, Zernike, and power-meter panels when they were passed to it.
 
 <!-- gui-screenshot -->
 ![BeamSteering GUI](docs/images/gui.png)

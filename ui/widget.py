@@ -27,13 +27,9 @@ def _clock(stamp):
 class SteeringWidget(QWidget):
     """Scan window, pattern flag, and the H and V maps."""
 
-    def __init__(self, engine, slm_widget, zernike_widget, powermeter_widget, parent=None):
+    def __init__(self, engine, parent=None):
         super().__init__(parent)
         self._engine = engine
-        self._slm_widget = slm_widget
-        self._zernike_widget = zernike_widget
-        self._powermeter_widget = powermeter_widget
-        self._busy = False
         self._build_ui()
 
         self._timer = QTimer(self)
@@ -61,8 +57,8 @@ class SteeringWidget(QWidget):
         pattern_layout = QVBoxLayout(pattern_box)
         pattern_layout.addWidget(self._pattern)
 
-        self._radius = self._spin(5.0, 0.05, 500.0, 0.1, 2, " µm")
-        self._step = self._spin(0.2, 0.01, 50.0, 0.05, 2, " µm")
+        self._radius = self._spin(5.0, 0.05, 500.0, 0.1, 2, " um")
+        self._step = self._spin(0.2, 0.01, 50.0, 0.05, 2, " um")
         scan_box = QGroupBox("Scan")
         scan_layout = QVBoxLayout(scan_box)
         scan_layout.addWidget(QLabel("Radius"))
@@ -141,7 +137,7 @@ class SteeringWidget(QWidget):
         return None
 
     def _on_scan_button(self):
-        if self._engine.running or self._busy:
+        if self._engine.running:
             self._engine.stop()
             return
 
@@ -155,17 +151,7 @@ class SteeringWidget(QWidget):
             scan_radius_um=self._radius.value(),
             step_um=self._step.value(),
         )
-        self._lock_instruments()
-        self._busy = True
-        started = self._engine.scan(
-            pol,
-            pattern_enabled=self._pattern.isChecked(),
-            on_sample=self._on_sample,
-            on_finished=self._queue_unlock,
-        )
-        if not started:
-            self._busy = False
-            self._unlock_instruments()
+        self._engine.scan(pol, pattern_enabled=self._pattern.isChecked())
 
     def _on_save(self):
         try:
@@ -175,32 +161,10 @@ class SteeringWidget(QWidget):
             return
         self._status.setText(f"Saved {folder}")
 
-    def _on_sample(self, power_w):
-        self._powermeter_widget.feed(power_w)
-
-    def _queue_unlock(self):
-        QTimer.singleShot(0, self, self._unlock_instruments)
-
-    def _lock_instruments(self):
-        self._slm_widget.disable_user_interface()
-        self._zernike_widget.setEnabled(False)
-        self._powermeter_widget.reset_extrema()
-        self._powermeter_widget.remote()
-
-    def _unlock_instruments(self):
-        try:
-            self._slm_widget.enable_user_interface()
-            self._zernike_widget.refresh_all_from_zernikes()
-            self._zernike_widget.enable_user_interface(True)
-            self._powermeter_widget.start()
-        finally:
-            self._busy = False
-
     def _refresh(self):
         maps, progress, running = self._engine.view_state()
-        busy = running or self._busy
-        self._apply_busy(busy)
-        self._show_progress(progress, busy)
+        self._apply_busy(running)
+        self._show_progress(progress, running)
         self._show_map(self._view_h, "H", maps.get("H"))
         self._show_map(self._view_v, "V", maps.get("V"))
 
